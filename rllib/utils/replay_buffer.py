@@ -4,10 +4,12 @@
 
 from collections import namedtuple
 import numpy as np
+import pickle
 import random
+from tqdm import tqdm
 
 # Reference: https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-transition_items = ['state', 'action', 'next_state', 'reward', 'done']
+transition_items = ['state', 'legal_actions', 'action', 'next_state', 'reward', 'done']
 
 Transition = namedtuple('Transition', tuple(transition_items))
 
@@ -43,6 +45,34 @@ class ReplayBuffer():
         new_sample = Transition(**args)
 
         return new_sample
+
+    def populate(self, env):
+        state = env.reset()
+
+        for i in tqdm(range(self.capacity)):
+            action = env.sample()
+            next_state, reward, done, _ = env.step(action)
+            self.push(state, action, next_state, reward, done)
+            state = next_state
+
+            if done:
+                state = env.reset()
+
+    def pop_all(self):
+        self.position = 0
+        return_list = []
+        return_list, self.memory = self.memory, return_list
+        return return_list
+
+    def save(self, path):
+        with open(path, 'wb') as myFile:
+            pickle.dump(self, myFile)
+
+    @classmethod
+    def load(cls, path):
+        with open(path, 'rb') as myFile:
+            rb = pickle.load(myFile)
+        return rb
 
     def __len__(self):
         return len(self.memory)
